@@ -1,4 +1,4 @@
-const db = require("../db/init");
+const db = require("../database/db-connection");
 
 exports.createStudent = async (req, res, next) => {
   const { name, email, age } = req.body;
