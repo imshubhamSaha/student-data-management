@@ -1,4 +1,3 @@
-require("dotenv").config();
 const mysql = require("mysql2");
 
 const dbInit = mysql.createConnection({
@@ -7,56 +6,43 @@ const dbInit = mysql.createConnection({
   password: process.env.DB_PASSWORD,
 });
 
-const initDatabase = () => {
-  return new Promise((resolve, reject) => {
-    dbInit.connect((err) => {
-      if (err)
-        return reject(new Error("MySQL connection failed: " + err.message));
+const initializeDatabase = (callback) => {
+  dbInit.connect((err) => {
+    if (err) return callback(err);
 
-      const dbName = process.env.DB_NAME;
+    dbInit.query(
+      `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``,
+      (err) => {
+        if (err) return callback(err);
 
-      /******* Create database if not exists *********/
-      dbInit.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``, (err) => {
-        if (err)
-          return reject(new Error("Failed to create database: " + err.message));
-
-        /******* Connect to the specific database ********/
         const db = mysql.createConnection({
           host: process.env.DB_HOST,
           user: process.env.DB_USER,
           password: process.env.DB_PASSWORD,
-          database: dbName,
+          database: process.env.DB_NAME,
         });
 
         db.connect((err) => {
-          if (err)
-            return reject(
-              new Error("Failed to connect to database: " + err.message)
-            );
-          console.log(`✅ Connected to MySQL Database: ${dbName}`);
+          if (err) return callback(err);
+          console.log(`✅ Connected to DB: ${process.env.DB_NAME}`);
 
-          /********Create the students table ***************/
-          const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS students (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              name VARCHAR(100),
-              email VARCHAR(100) UNIQUE,
-              age INT
-            )
-          `;
+          const createTable = `
+          CREATE TABLE IF NOT EXISTS students (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100),
+            email VARCHAR(100) UNIQUE,
+            age INT
+          )`;
 
-          db.query(createTableQuery, (err) => {
-            if (err)
-              return reject(
-                new Error("Failed to create students table: " + err.message)
-              );
+          db.query(createTable, (err) => {
+            if (err) return callback(err);
             console.log("✅ Table 'students' is ready.");
-            resolve(db);
+            callback(null, db);
           });
         });
-      });
-    });
+      }
+    );
   });
 };
 
-module.exports = initDatabase;
+module.exports = initializeDatabase;
