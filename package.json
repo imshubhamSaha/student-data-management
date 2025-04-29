@@ -1,0 +1,11 @@
+{
+  "name": "student-data-management",
+  "version": "1.0.0",
+  "description": "Manages all kind of students data of any intitutions, like adding new students informantion, etc. I started with very basic features , eventually updates the features as the app grows.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Shubham Saha",
+  "license": "ISC"
+}
