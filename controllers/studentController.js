@@ -1,88 +1,87 @@
-const db = require("../database/db-connection");
+const { getDb } = require("../database/init");
 
-exports.createStudent = async (req, res, next) => {
+// CREATE
+exports.createStudent = (req, res, next) => {
   const { name, email, age } = req.body;
-  try {
-    if (!name || !email || !age) {
-      const error = new Error("Name, email, and age are required.");
-      error.status = 400;
-      throw error;
+  if (!name || !email || !age)
+    return res.status(400).json({ error: "All fields required." });
+
+  const db = getDb();
+  db.query(
+    "INSERT INTO students (name, email, age) VALUES (?, ?, ?)",
+    [name, email, age],
+    (err, result) => {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY")
+          return res.status(409).json({ error: "Email exists." });
+        return next(err);
+      }
+      console.log("✅ Inserted:", result.insertId);
+      res.status(201).json({ id: result.insertId, name, email, age });
     }
-
-    const [result] = await db.execute(
-      "INSERT INTO students (name, email, age) VALUES (?, ?, ?)",
-      [name, email, age]
-    );
-
-    console.log("✅ Inserted student ID:", result.insertId);
-    res.status(201).json({ id: result.insertId, name, email, age });
-  } catch (err) {
-    next(err);
-  }
+  );
 };
 
-exports.getAllStudents = async (req, res, next) => {
-  try {
-    const [rows] = await db.execute("SELECT * FROM students");
-    res.json(rows);
-  } catch (err) {
-    next(err);
-  }
+// READ ALL
+exports.getAllStudents = (req, res, next) => {
+  const db = getDb();
+  db.query("SELECT * FROM students", (err, results) => {
+    if (err) return next(err);
+    res.json(results);
+  });
 };
 
-exports.getStudentById = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const [rows] = await db.execute("SELECT * FROM students WHERE id = ?", [
-      id,
-    ]);
-    if (rows.length === 0) {
-      const error = new Error("Student not found.");
-      error.status = 404;
-      throw error;
+// READ BY ID
+exports.getStudentById = (req, res, next) => {
+  const db = getDb();
+  db.query(
+    "SELECT * FROM students WHERE id = ?",
+    [req.params.id],
+    (err, results) => {
+      if (err) return next(err);
+      if (results.length === 0)
+        return res.status(404).json({ error: "Not found" });
+      res.json(results[0]);
     }
-    res.json(rows[0]);
-  } catch (err) {
-    next(err);
-  }
+  );
 };
 
-exports.updateStudent = async (req, res, next) => {
-  const { id } = req.params;
+// UPDATE
+exports.updateStudent = (req, res, next) => {
   const { name, email, age } = req.body;
-  try {
-    const [result] = await db.execute(
-      "UPDATE students SET name = ?, email = ?, age = ? WHERE id = ?",
-      [name, email, age, id]
-    );
+  if (!name || !email || !age)
+    return res.status(400).json({ error: "All fields required." });
 
-    if (result.affectedRows === 0) {
-      const error = new Error("Student not found.");
-      error.status = 404;
-      throw error;
+  const db = getDb();
+  db.query(
+    "UPDATE students SET name = ?, email = ?, age = ? WHERE id = ?",
+    [name, email, age, req.params.id],
+    (err, result) => {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY")
+          return res.status(409).json({ error: "Email exists." });
+        return next(err);
+      }
+      if (result.affectedRows === 0)
+        return res.status(404).json({ error: "Not found" });
+      console.log("✅ Updated ID:", req.params.id);
+      res.json({ message: "Student updated." });
     }
-
-    console.log("✅ Updated student ID:", id);
-    res.json({ message: "Student updated successfully" });
-  } catch (err) {
-    next(err);
-  }
+  );
 };
 
-exports.deleteStudent = async (req, res, next) => {
-  const { id } = req.params;
-  try {
-    const [result] = await db.execute("DELETE FROM students WHERE id = ?", [
-      id,
-    ]);
-    if (result.affectedRows === 0) {
-      const error = new Error("Student not found.");
-      error.status = 404;
-      throw error;
+// DELETE
+exports.deleteStudent = (req, res, next) => {
+  const db = getDb();
+  db.query(
+    "DELETE FROM students WHERE id = ?",
+    [req.params.id],
+    (err, result) => {
+      if (err) return next(err);
+      if (result.affectedRows === 0)
+        return res.status(404).json({ error: "Not found" });
+      console.log("🗑️ Deleted ID:", req.params.id);
+      res.json({ message: "Student deleted." });
     }
-    console.log("✅ Deleted student ID:", id);
-    res.json({ message: "Student deleted successfully" });
-  } catch (err) {
-    next(err);
-  }
+  );
 };
